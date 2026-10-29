@@ -45,6 +45,13 @@ class MicrosturingDataset(Dataset):
         missing_columns = required_columns.difference(self.df.columns)
         if missing_columns:
             raise ValueError(f'Missing annotation columns: {sorted(missing_columns)}')
+        score_columns = ['ISD', 'Slack', 'Position', 'Angulation', 'Width', 'Overall']
+        if self.df.empty or self.df['Name'].isna().any():
+            raise ValueError('Annotations must be nonempty with an image name for every row.')
+        self.df[score_columns] = self.df[score_columns].apply(pd.to_numeric, errors='raise')
+        scores = self.df[score_columns].to_numpy(dtype=float)
+        if not np.isfinite(scores).all() or (scores < 0).any() or (scores > 10).any():
+            raise ValueError('All annotation scores must be finite numbers between 0 and 10.')
         
         self.image_dir = Path(image_dir)
         self.transform = transform

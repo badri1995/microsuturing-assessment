@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Subset
 
 
-from sklearn.model_selection import StratifiedKFold
+from splits import make_folds
 
 
 from tqdm import tqdm
@@ -343,6 +343,7 @@ def main():
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--group-column", help="Workbook column identifying related subjects or sessions.")
     args = parser.parse_args()
     if args.folds < 2 or args.epochs < 1:
         parser.error("folds must be at least 2 and epochs must be positive")
@@ -352,22 +353,20 @@ def main():
     np.random.seed(args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dataset = MicrosturingDataset(args.annotations, args.images, transform=get_transforms(224, mode="train"))
-    if dataset.df["Name"].duplicated().any():
-        raise ValueError("Duplicate image names must be resolved before cross-validation.")
-    labels = dataset.df["safety_label"].to_numpy()
-    counts = np.bincount(labels, minlength=3)
-    if (counts < args.folds).any():
-        raise ValueError("Each of the three score groups needs at least one sample per fold.")
+    folds = make_folds(dataset.df, args.folds, args.seed, args.group_column)
     args.output.mkdir(parents=True, exist_ok=True)
-    splitter = StratifiedKFold(n_splits=args.folds, shuffle=True, random_state=args.seed)
     metrics = []
     print("Research use only. Related subjects, sessions and near-duplicate images require grouped splits.")
-    for fold_number, (train_indices, validation_indices) in enumerate(splitter.split(np.arange(len(dataset)), labels)):
+    if args.group_column is None:
+        print("WARNING: image-level splitting selected; use --group-column for related images.")
+    for fold_number, (train_indices, validation_indices) in enumerate(folds):
         metrics.append(train_fold(fold_number, train_indices, validation_indices, dataset, device, args.output, epochs=args.epochs))
     summary = {
         "folds": args.folds,
         "samples": len(dataset),
         "seed": args.seed,
+        "split_strategy": "stratified_group" if args.group_column else "stratified_image",
+        "group_column": args.group_column,
         "balanced_accuracy_mean": float(np.mean([result["balanced_acc"] for result in metrics])),
         "balanced_accuracy_std": float(np.std([result["balanced_acc"] for result in metrics])),
         "fold_metrics": metrics,
