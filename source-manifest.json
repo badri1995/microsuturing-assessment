@@ -1,0 +1,10 @@
+{
+  "source_files_sha256": {
+    "model_fixed.py": "7ecc96e72952cc8a70be9b5efd5f3542d3adbe5cc99c8e6d74994b3cb1b68615",
+    "dataset_fixed.py": "ec581a379d91350033f79e6f96b1deb5faea459c2aed9175ab5fe8ea175220ae",
+    "losses_fixed.py": "5b5609b36d7ffa11c3c2bdc5d27b9ea865a10e4ee67c638d20196bd807b50bba",
+    "train_kfold_cv.py": "187a36462d9dc0ff77db3b054d19150b182c08903a47a5f7278711a4f0e8d861"
+  },
+  "research_context": "AIIMS New Delhi",
+  "snapshot": "Selected modular research source; no study data or results included."
+}
